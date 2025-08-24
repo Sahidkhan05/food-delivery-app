@@ -7,6 +7,7 @@ const {
   loginUser,
   loginAdmin,
   userProfileUpdate,
+  updateLocation,
 } = require('../controllers/authController');
 const upload = require('../middlewares/uploadMiddleware');
 
@@ -29,5 +30,7 @@ router.post('/admin/login', loginAdmin);
 
 
 router.put('/profile', verifyToken, userProfileUpdate);
+
+router.put("/location", verifyToken, updateLocation);
 
 module.exports = router;

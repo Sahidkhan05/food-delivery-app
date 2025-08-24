@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/foodexpress';
 
 // Middleware
-app.use(cors());
+app.use(cors()); 
 app.use(express.json());
 
 // MongoDB Connection

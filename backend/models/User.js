@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema({
     default: "",
   },
 
+  phone: {                        
+    type: String,
+    required: true,
+  },
+
   currentLocation: {
     type: {
       type: String,
@@ -58,6 +63,7 @@ const userSchema = new mongoose.Schema({
     enum: ["pending", "approved", "rejected"],
     default: "pending",
   },
+  
 
   joiningDate: {
     type: Date,

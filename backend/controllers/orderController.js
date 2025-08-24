@@ -35,6 +35,7 @@ const placeOrder = async (req, res) => {
       shippingAddress,
       paymentMethod,
       restaurant: restaurantId,
+      orderStatus: "pending",
     });
 
     await newOrder.save();
@@ -56,9 +57,11 @@ const getUserOrders = async (req, res) => {
     const userId = req.user.id;
 
     const orders = await Order.find({ user: userId })
-      .sort({ createdAt: -1 })
-      .populate("restaurant", "name") // ✅ Restaurant name populate
-      .populate("items.food", "name price image"); // ✅ Food info populate
+  .sort({ createdAt: -1 })
+  .populate("user", "name email phone addresses") 
+  .populate("restaurant", "name address")        
+  .populate("items.food", "name price image");  
+
 
     res.status(200).json(orders);
   } catch (error) {
@@ -72,9 +75,11 @@ const getOrdersForRestaurant = async (req, res) => {
     const restaurantId = req.user.id; // Assuming this is a restaurant login
 
     const orders = await Order.find({ restaurant: restaurantId })
-      .sort({ createdAt: -1 })
-      .populate("user", "name") //  User name show hoga
-      .populate("items.food", "name price image"); // Food info bhi show hogi
+  .sort({ createdAt: -1 })
+  .populate("user", "name email phone addresses")   
+  .populate("deliveryBoy", "name phone")          
+  .populate("items.food", "name price image");     
+
 
     res.status(200).json(orders);
   } catch (error) {
@@ -92,7 +97,11 @@ const updateOrderStatus = async (req, res) => {
     const userRole = req.user.role;
     const userId = req.user.id;
 
-    const order = await Order.findById(orderId).populate("restaurant");
+    const order = await Order.findById(orderId)
+  .populate("restaurant", "name address")
+  .populate("user", "name email phone addresses")
+  .populate("deliveryBoy", "name phone")
+  .populate("items.food", "name price image");
 
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
@@ -104,13 +113,8 @@ const updateOrderStatus = async (req, res) => {
         return res.status(403).json({ message: "Unauthorized" });
       }
 
-      const restaurantLocation = order.restaurant.currentLocation;
-      if (
-        !restaurantLocation?.coordinates ||
-        restaurantLocation.coordinates.length < 2
-      ) {
-        return res.status(400).json({ message: "Restaurant location not set" });
-      }
+      order.orderStatus = "confirmed";
+      await order.save();
 
       // Find nearby active delivery boys
 const nearbyDeliveryBoys = await DeliveryBoy.find({

@@ -19,7 +19,7 @@ const deliveryRequestSchema = new mongoose.Schema({
   ],
   status: {
     type: String,
-    enum: ["pending", "accepted", "expired", "cancelled", "failed", "completed"], 
+    enum: ["pending", "accepted", "expired", "cancelled", "failed", "completed" , "delivered"], 
     default: "pending"
   },
   acceptedBy: {

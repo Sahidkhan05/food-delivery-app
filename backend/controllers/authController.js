@@ -213,6 +213,42 @@ const userProfileUpdate = async (req, res) => {
   }
 };
 
+// Update Location
+const updateLocation = async (req, res) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+    const userId = req.user.id;  // ✅ FIXED
+    const { coordinates } = req.body;
+
+    if (!coordinates || coordinates.length !== 2) {
+      return res.status(400).json({ message: "Coordinates array required [longitude, latitude]" });
+    }
+
+    const [longitude, latitude] = coordinates;
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        currentLocation: {
+          type: "Point",
+          coordinates: [longitude, latitude],
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Location updated successfully", user: updatedUser });
+  } catch (err) {
+    console.error("Location update error:", err);
+    res.status(500).json({ message: "Failed to update location", error: err.message });
+  }
+};
+
+
+
 
 module.exports = {
   signupUser,
@@ -221,4 +257,5 @@ module.exports = {
   loginUser,
   loginAdmin,
   userProfileUpdate,
+  updateLocation,
 };

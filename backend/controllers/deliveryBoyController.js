@@ -138,11 +138,11 @@ const getDeliveryOrders = async (req, res) => {
   try {
     const deliveryBoyId = req.user._id;
 
+    // Pending requests for this delivery boy
     const pendingRequests = await DeliveryRequest.find({
       possibleDeliveryBoys: deliveryBoyId,
       status: "pending",
     })
-      .populate("order")
       .populate({
         path: "order",
         populate: [
@@ -151,12 +151,20 @@ const getDeliveryOrders = async (req, res) => {
         ],
       });
 
-    const assignedOrders = await Order.find({
-      deliveryBoy: deliveryBoyId,
-      orderStatus: "Out for delivery", // ✅ enum value
+    // Assigned orders => accepted by this delivery boy
+    const assignedOrders = await DeliveryRequest.find({
+      acceptedBy: deliveryBoyId,
+      status: "accepted", // only accepted orders
     })
-      .populate("restaurant", "name")
-      .populate("items.food", "name price image");
+      .populate({
+        path: "order",
+        populate: [
+          { path: "restaurant", select: "name" },
+          { path: "user", select: "name phone" },
+          { path: "items.food", select: "name price image" },
+        ],
+      })
+      .sort({ createdAt: -1 });
 
     res.json({ pendingRequests, assignedOrders });
   } catch (error) {
@@ -223,8 +231,16 @@ const markOrderDelivered = async (req, res) => {
     await request.save();
 
     // update order
-    request.order.orderStatus = "Delivered";
+    request.order.orderStatus = "delivered";
     await request.order.save();
+
+    // ✅ Update delivery boy earnings and total deliveries
+    await DeliveryBoy.findByIdAndUpdate(deliveryBoyId, {
+      $inc: {
+        totalEarnings: Number(request.order.totalPrice),
+        totalDeliveries: 1,
+      },
+    });
 
     res.status(200).json({ message: "Order marked as delivered", request });
   } catch (error) {
@@ -232,6 +248,53 @@ const markOrderDelivered = async (req, res) => {
     res.status(500).json({ message: "Something went wrong" });
   }
 };
+
+
+// Get delivered orders for delivery boy
+const getDeliveredOrders = async (req, res) => {
+  try {
+    const deliveryBoyId = req.user._id;
+
+    const deliveredRequests = await DeliveryRequest.find({
+      acceptedBy: deliveryBoyId,
+      status: "delivered",
+    }).populate({
+      path: "order",
+      populate: [
+        { path: "restaurant", select: "name" },
+        { path: "user", select: "name phone" },
+        { path: "items.food", select: "name price image" },
+      ],
+    }).sort({ updatedAt: -1 });
+
+    res.status(200).json(deliveredRequests);
+  } catch (error) {
+    console.error("Fetch delivered orders error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+// Get delivery boy earnings and total deliveries
+const getEarnings = async (req, res) => {
+  try {
+    const deliveryBoyId = req.user._id;
+    const deliveryBoy = await DeliveryBoy.findById(deliveryBoyId);
+
+    if (!deliveryBoy) {
+      return res.status(404).json({ message: "Delivery boy not found" });
+    }
+
+    res.status(200).json({
+      totalEarnings: deliveryBoy.totalEarnings,
+      totalDeliveries: deliveryBoy.totalDeliveries,
+    });
+  } catch (error) {
+    console.error("Fetch earnings error:", error);
+    res.status(500).json({ message: "Something went wrong" });
+  }
+};
+
+
 
 module.exports = {
   updateLocation,
@@ -242,4 +305,6 @@ module.exports = {
   getPendingDeliveryRequests,
   getDeliveryOrders,
   markOrderDelivered,
+  getDeliveredOrders,
+  getEarnings,
 };

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 
-const { markOrderDelivered , updateLocation, getDeliveryBoyDetails,updateDeliveryBoyProfile, acceptDeliveryRequest,rejectDeliveryRequest,getPendingDeliveryRequests, getDeliveryOrders } = require('../controllers/deliveryBoyController');
+const { getEarnings , getDeliveredOrders , markOrderDelivered , updateLocation, getDeliveryBoyDetails,updateDeliveryBoyProfile, acceptDeliveryRequest,rejectDeliveryRequest,getPendingDeliveryRequests, getDeliveryOrders } = require('../controllers/deliveryBoyController');
 const verifyTokenAndDeliveryBoy = require('../middlewares/verifyTokenAndDeliveryBoy'); 
 
 // Get delivery boy profile
@@ -15,6 +15,8 @@ router.post("/request/:requestId/reject", verifyTokenAndDeliveryBoy, rejectDeliv
 router.get("/requests", verifyTokenAndDeliveryBoy, getPendingDeliveryRequests);
 router.get("/orders", verifyTokenAndDeliveryBoy, getDeliveryOrders);
 router.put("/location", verifyTokenAndDeliveryBoy, updateLocation);
-router.post("/request/:requestId/deliver", verifyTokenAndDeliveryBoy, markOrderDelivered);
+router.put("/request/:requestId/deliver", verifyTokenAndDeliveryBoy, markOrderDelivered);
+router.get('/delivered', verifyTokenAndDeliveryBoy, getDeliveredOrders);
+router.get("/earnings", verifyTokenAndDeliveryBoy, getEarnings);
 
 module.exports = router;

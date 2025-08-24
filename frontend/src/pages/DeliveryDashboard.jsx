@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import DeliverySidebar from "../components/DeliverySidebar";
 import axios from "axios";
 import OrderAssigned from "../components/OrderAssigned";
+import OrderHistory from "../components/OrderHistory";
+import DeliveryEarnings from "../components/DeliveryEarnings";
 
 const DeliveryDashboard = () => {
   const [activeTab, setActiveTab] = useState("Profile");
@@ -224,10 +226,26 @@ const DeliveryDashboard = () => {
       case "Orders":
         return (
           <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 text-gray-900 dark:text-gray-100">
-            <h2 className="text-xl font-semibold mb-4">📦 Assigned Orders</h2>
+            <h2 className="text-xl font-semibold mb-4"></h2>
             <OrderAssigned orders={orders} />
           </div>
         );
+
+        case "Order History":
+  return (
+    <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 text-gray-900 dark:text-gray-100">
+      <OrderHistory/>
+    </div>
+  );
+
+  case "Earnings":
+  return (
+    <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 text-gray-900 dark:text-gray-100">
+      <DeliveryEarnings/>
+    </div>
+  );
+
+
 
       case "Logout":
         localStorage.removeItem("token");
