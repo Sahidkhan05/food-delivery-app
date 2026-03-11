@@ -1,18 +1,25 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 
 const LoginPage = () => {
+
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
+
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
+
       const response = await axios.post(
         "http://localhost:5000/api/auth/login",
         { email, password }
@@ -25,78 +32,173 @@ const LoginPage = () => {
       localStorage.setItem("role", user.role || "user");
 
       switch (user.role) {
+
         case "admin":
           navigate("/admin-dashboard");
           break;
+
         case "restaurant":
           navigate("/restaurant-dashboard");
           break;
+
         case "deliveryBoy":
           navigate("/delivery-dashboard");
           break;
+
         default:
           navigate("/user-dashboard");
+
       }
+
     } catch (err) {
-      if (err.response?.data?.message) {
-        setError(err.response.data.message);
-      } else {
-        setError("Invalid email or password");
-      }
+
+      setError(err.response?.data?.error || "Invalid email or password");
+
+    } finally {
+
+      setLoading(false);
+
     }
+
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-100 dark:bg-gray-500">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-96 text-gray-900 dark:text-gray-100"
-      >
-        <h2 className="text-2xl font-bold mb-4 text-center">Login</h2>
 
-        {error && (
-          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
-        )}
+    <div className="
+    min-h-screen flex items-center justify-center
+    bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+    p-6
+    ">
 
-        <div className="mb-4">
-          <label htmlFor="email" className="block text-gray-700 dark:text-gray-200 font-medium mb-2">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
+      <div className="
+      bg-white dark:bg-gray-900
+      rounded-3xl
+      shadow-[0_20px_60px_rgba(0,0,0,0.25)]
+      flex overflow-hidden
+      max-w-5xl w-full
+      ">
+
+        {/* LEFT IMAGE */}
+
+        <div className="relative hidden md:block w-1/2">
+
+          <img
+  src="/login.jpg"
+  alt="food delivery"
+  className="h-full w-full object-cover"
+/>
+
+          <div className="
+          absolute inset-0
+          bg-gradient-to-t from-black/70 via-black/30 to-transparent
+          flex items-end p-8 text-white
+          ">
+
+            <div>
+
+              <h2 className="text-2xl font-bold">
+                Delicious Food Delivered
+              </h2>
+
+              <p className="text-sm opacity-90">
+                Order from your favorite restaurants anytime.
+              </p>
+
+            </div>
+
+          </div>
+
         </div>
 
-        <div className="mb-6">
-          <label htmlFor="password" className="block text-gray-700 dark:text-gray-200 font-medium mb-2">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring focus:border-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
+        {/* RIGHT FORM */}
+
+        <div className="w-full md:w-1/2 p-10">
+
+          <h2 className="text-3xl font-bold mb-2 text-gray-800 dark:text-white">
+            Welcome Back 👋
+          </h2>
+
+          <p className="text-sm text-gray-500 mb-6">
+            Login to continue ordering delicious food
+          </p>
+
+          {error && (
+            <div className="bg-red-100 text-red-600 p-3 rounded mb-4 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <input
+              type="email"
+              placeholder="Email Address"
+              className="
+              w-full p-3 border rounded-lg
+              focus:outline-none
+              focus:ring-2 focus:ring-[#6366F1]
+              "
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              className="
+              w-full p-3 border rounded-lg
+              focus:outline-none
+              focus:ring-2 focus:ring-[#6366F1]
+              "
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="
+              w-full py-3
+              bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+              text-white font-semibold
+              rounded-lg
+              hover:shadow-[0_10px_30px_rgba(99,102,241,0.5)]
+              transition duration-300
+              "
+            >
+              {loading ? "Logging in..." : "Login"}
+            </button>
+
+          </form>
+
+          <div className="flex justify-between mt-4 text-sm">
+
+            <Link
+              to="/forgot-password"
+              className="text-[#6366F1] hover:underline"
+            >
+              Forgot Password
+            </Link>
+
+            <Link
+              to="/signup/user"
+              className="text-[#6366F1] hover:underline"
+            >
+              Sign Up
+            </Link>
+
+          </div>
+
         </div>
 
-        <button
-          type="submit"
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition"
-        >
-          Login
-        </button>
-      </form>
+      </div>
+
     </div>
+
   );
+
 };
 
 export default LoginPage;

@@ -2,234 +2,407 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import UserSidebar from "../components/UserSidebar";
-import Footer from "../components/Footer";
 import MyOrder from "../components/MyOrder";
 import FeaturedRestaurants from "../components/FeaturedRestaurants";
+import OrderTracking from "./OrderTracking";
 
 const UserDashboard = () => {
-  const [activeTab, setActiveTab] = useState("Profile");
+
+  const navigate = useNavigate();
+
+  const [activeTab, setActiveTab] = useState("Order Now");
+
   const [user, setUser] = useState({
     name: "",
     email: "",
     phone: "",
-    currentLocation: null,
+    profileImage: "",
+    addresses: [],
+    currentLocation: null
   });
+
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({ name: "" });
-  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    street: "",
+    city: "",
+    pincode: ""
+  });
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem("user"));
-    if (storedUser) {
-      setUser(storedUser);
-      setFormData({ name: storedUser.name || "",
-       phone: storedUser.phone || "" 
-       });
-    }
+
+    const fetchProfile = async () => {
+
+      try {
+
+        const token = localStorage.getItem("token");
+
+        const res = await axios.get(
+          "http://localhost:5000/api/auth/profile",
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+
+        setUser(res.data);
+
+        setFormData({
+          name: res.data.name || "",
+          phone: res.data.phone || "",
+          street: res.data.addresses?.[0]?.street || "",
+          city: res.data.addresses?.[0]?.city || "",
+          pincode: res.data.addresses?.[0]?.pincode || ""
+        });
+
+      } catch (err) {
+        console.log(err);
+      }
+
+    };
+
+    fetchProfile();
+
   }, []);
 
   useEffect(() => {
+
     if (activeTab === "Logout") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.clear();
       navigate("/login");
     }
+
   }, [activeTab, navigate]);
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
- const handleUpdateProfile = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const res = await axios.put(
-      "http://localhost:5000/api/auth/profile",
-      { name: formData.name, phone: formData.phone }, // ✅ formData.phone use karo
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
+  const handleUpdateProfile = async () => {
 
-    setUser(res.data.user);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setIsEditing(false);
-    alert("Profile updated successfully!");
-  } catch (err) {
-    console.error(err);
-    alert("Error updating profile: " + (err.response?.data?.error || err.message));
-  }
-};
+    try {
+
+      const token = localStorage.getItem("token");
+
+      const res = await axios.put(
+        "http://localhost:5000/api/auth/profile",
+        {
+          name: formData.name,
+          phone: formData.phone,
+          address: {
+            type: "Home",
+            street: formData.street,
+            city: formData.city,
+            pincode: formData.pincode
+          }
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      setUser(res.data.user);
+
+      setFormData({
+        name: res.data.user.name || "",
+        phone: res.data.user.phone || "",
+        street: res.data.user.addresses?.[0]?.street || "",
+        city: res.data.user.addresses?.[0]?.city || "",
+        pincode: res.data.user.addresses?.[0]?.pincode || ""
+      });
+
+      setIsEditing(false);
+
+      alert("Profile updated successfully");
+
+    } catch {
+      alert("Update failed");
+    }
+
+  };
+
+  const handleImageUpload = async (e) => {
+
+    const file = e.target.files[0];
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const token = localStorage.getItem("token");
+
+    try {
+
+      const res = await axios.put(
+        "http://localhost:5000/api/auth/profile-image",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
+        }
+      );
+
+      setUser(res.data.user);
+
+      alert("Profile image updated");
+
+    } catch {
+      alert("Upload failed");
+    }
+
+  };
 
   const handleFetchLocation = () => {
-    if (!navigator.geolocation) return alert("Geolocation not supported");
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        try {
-          const token = localStorage.getItem("token");
-          const res = await axios.put(
-            "http://localhost:5000/api/auth/location",
-            {
-              currentLocation: {
-                type: "Point",
-                coordinates: [longitude, latitude],
-              },
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-              },
-            }
-          );
+    if (!navigator.geolocation) {
+      return alert("Geolocation not supported");
+    }
 
-          setUser(res.data.user);
-          localStorage.setItem("user", JSON.stringify(res.data.user));
-          alert("📍 Location updated successfully!");
-        } catch (err) {
-          console.error(err);
-          alert(
-            "Failed to update location: " +
-              (err.response?.data?.error || err.message)
-          );
-        }
-      },
-      (err) => {
-        console.error(err);
-        alert("Could not fetch location");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+
+      const { latitude, longitude } = pos.coords;
+
+      try {
+
+        const token = localStorage.getItem("token");
+
+        const res = await axios.put(
+          "http://localhost:5000/api/auth/location",
+          {
+            coordinates: [longitude, latitude]
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+
+        setUser(res.data.user);
+
+        alert("Location updated");
+
+      } catch {
+        alert("Location update failed");
       }
-    );
+
+    });
+
   };
 
   const renderContent = () => {
+
     switch (activeTab) {
+
       case "Profile":
+
         return (
-          <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 shadow-md rounded-lg p-6 text-gray-900 dark:text-gray-100">
-            <h2 className="text-2xl font-bold mb-4">👤 Welcome {user.name}</h2>
+
+          <div className="max-w-4xl mx-auto
+          bg-white/90 dark:bg-gray-900/90
+          text-gray-900 dark:text-gray-100
+          backdrop-blur-lg rounded-2xl shadow-xl p-8
+          transition-colors duration-300">
+
+            <h2 className="text-3xl font-bold mb-6
+            bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+            bg-clip-text text-transparent">
+              Welcome, {user.name}
+            </h2>
+
+            <div className="flex items-center gap-6 mb-8">
+
+              <img
+                src={
+                  user.profileImage
+                    ? `http://localhost:5000/uploads/${user.profileImage}`
+                    : "https://cdn-icons-png.flaticon.com/512/149/149071.png"
+                }
+                alt="profile"
+                className="w-24 h-24 rounded-full object-cover border"
+              />
+
+              <label className="bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+              text-white px-4 py-2 rounded cursor-pointer hover:scale-105 transition">
+
+                Upload Photo
+
+                <input
+                  type="file"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+
+              </label>
+
+            </div>
+
             {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-300">Name</p>
-                  <input
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    className="border p-2 w-full rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-                <div>
-                  <p className="text-gray-600 dark:text-gray-300">Email</p>
-                  <input
-                    value={user.email || ""}
-                    disabled
-                    className="border p-2 w-full rounded bg-gray-200 dark:bg-gray-600 cursor-not-allowed text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-                <div>
-                  <p className="text-gray-600 dark:text-gray-300">Mobile</p>
-                  <input
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="border p-2 w-full rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-                <div className="col-span-2 flex gap-2">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <input
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  className="border p-3 rounded-lg dark:bg-gray-800"
+                  placeholder="Name"
+                />
+
+                <input
+                  value={user.email}
+                  disabled
+                  className="border p-3 rounded-lg bg-gray-200 dark:bg-gray-700"
+                />
+
+                <input
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  className="border p-3 rounded-lg dark:bg-gray-800"
+                  placeholder="Phone"
+                />
+
+                <input
+                  name="street"
+                  value={formData.street}
+                  onChange={handleInputChange}
+                  className="border p-3 rounded-lg dark:bg-gray-800"
+                  placeholder="Street"
+                />
+
+                <input
+                  name="city"
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="border p-3 rounded-lg dark:bg-gray-800"
+                  placeholder="City"
+                />
+
+                <input
+                  name="pincode"
+                  value={formData.pincode}
+                  onChange={handleInputChange}
+                  className="border p-3 rounded-lg dark:bg-gray-800"
+                  placeholder="Pincode"
+                />
+
+                <div className="flex gap-3">
+
                   <button
                     onClick={handleUpdateProfile}
-                    className="bg-green-500 text-white px-4 py-2 rounded"
+                    className="bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+                    text-white px-6 py-2 rounded-lg hover:scale-105 transition"
                   >
                     Save
                   </button>
+
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="bg-gray-500 text-white px-4 py-2 rounded"
+                    className="bg-gray-400 text-white px-6 py-2 rounded-lg"
                   >
                     Cancel
                   </button>
+
                 </div>
+
               </div>
+
             ) : (
+
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-300">Name</p>
+
+                <div className="grid grid-cols-2 gap-6">
+
+                  <div className="bg-indigo-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p>Name</p>
                     <p className="font-semibold">{user.name}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-300">Email</p>
+
+                  <div className="bg-indigo-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p>Email</p>
                     <p className="font-semibold">{user.email}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-300">Mobile</p>
-                    <p className="font-semibold">
-                      {user.phone || "Not Provided"}
-                    </p>
+
+                  <div className="bg-indigo-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p>Phone</p>
+                    <p className="font-semibold">{user.phone}</p>
                   </div>
-                  <div>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      Current Location
-                    </p>
+
+                  <div className="bg-indigo-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p>Address</p>
                     <p className="font-semibold">
-                      {user.currentLocation?.coordinates
-                        ? `Lat: ${user.currentLocation.coordinates[1]}, Lng: ${user.currentLocation.coordinates[0]}`
+                      {user.addresses?.length
+                        ? `${user.addresses[0].street}, ${user.addresses[0].city} - ${user.addresses[0].pincode}`
                         : "Not Set"}
                     </p>
                   </div>
+
                 </div>
-                <div className="mt-4 flex gap-2">
+
+                <div className="mt-6 flex gap-4">
+
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="bg-blue-500 text-white px-4 py-2 rounded"
+                    className="bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+                    text-white px-6 py-2 rounded-lg hover:scale-105 transition"
                   >
                     Edit Profile
                   </button>
+
                   <button
                     onClick={handleFetchLocation}
-                    className="bg-green-500 text-white px-4 py-2 rounded"
+                    className="bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+                    text-white px-6 py-2 rounded-lg hover:scale-105 transition"
                   >
-                    📍 Update Location
+                    Update Location
                   </button>
+
                 </div>
+
               </>
+
             )}
+
           </div>
+
         );
+
       case "Order Now":
         return <FeaturedRestaurants />;
+
       case "My Orders":
         return <MyOrder />;
-      case "Favorites":
-        return (
-          <div className="text-black dark:text-white">
-            ❤️ Your Favorite Items.
-          </div>
-        );
-      case "Settings":
-        return (
-          <div className="text-black dark:text-white">
-            ⚙️ Your Settings here.
-          </div>
-        );
-      case "Logout":
-        return (
-          <div className="text-black dark:text-white">🔒 Logging out...</div>
-        );
+
+      case "Track Orders":
+        return <OrderTracking />;
+
       default:
         return null;
+
     }
+
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-500 transition-colors">
-      <div className="flex flex-1">
-        <UserSidebar activeTab={activeTab} onTabClick={setActiveTab} />
-        <div className="flex-1 p-6">{renderContent()}</div>
+
+    <div className="flex min-h-screen
+    bg-gradient-to-br from-[#EEF2FF] to-[#F5F3FF]
+    dark:from-gray-900 dark:to-gray-800
+    transition-colors duration-300">
+
+      <UserSidebar activeTab={activeTab} onTabClick={setActiveTab} />
+
+      <div className="flex-1 ml-64 p-8">
+
+        {renderContent()}
+
       </div>
-      <Footer />
+
     </div>
+
   );
+
 };
 
 export default UserDashboard;

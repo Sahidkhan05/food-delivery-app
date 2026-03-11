@@ -1,5 +1,6 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+
 const {
   signupUser,
   signupDelivery,
@@ -8,29 +9,63 @@ const {
   loginAdmin,
   userProfileUpdate,
   updateLocation,
-} = require('../controllers/authController');
-const upload = require('../middlewares/uploadMiddleware');
+  forgotPassword,
+  resetPassword,
+  addAddress,
+  getUserProfile,
+  updateProfileImage,
+} = require("../controllers/authController");
 
-const verifyToken = require('../middlewares/authMiddleware');
+const upload = require("../middlewares/uploadMiddleware");
+const verifyToken = require("../middlewares/authMiddleware");
 
 // User
-router.post('/signup/user', signupUser);
+router.post("/signup/user", signupUser);
 
-// Delivery Boy
-router.post('/signup/delivery', signupDelivery);
+// Delivery Boy (with profile image)
+router.post(
+  "/signup/delivery",
+  upload.single("image"),
+  signupDelivery
+);
 
 // Restaurant
-router.post('/signup/restaurant', upload.single('image') ,signupRestaurant);
+router.post(
+  "/signup/restaurant",
+  upload.single("image"),
+  signupRestaurant
+);
 
-// Login (Common)
-router.post('/login', loginUser);
+// Login
+router.post("/login", loginUser);
 
-// Login (Cadmin)
-router.post('/admin/login', loginAdmin);
+// Admin Login
+router.post("/admin/login", loginAdmin);
 
+// Profile update
+router.put("/profile", verifyToken, userProfileUpdate);
 
-router.put('/profile', verifyToken, userProfileUpdate);
-
+// Location update
 router.put("/location", verifyToken, updateLocation);
+
+// Forgot password
+router.post("/forgot-password", forgotPassword);
+
+// Reset password
+router.post("/reset-password/:token", resetPassword);
+
+// Add address
+router.post("/address", verifyToken, addAddress);
+
+// Get profile
+router.get("/profile", verifyToken, getUserProfile);
+
+// Update profile image
+router.put(
+  "/profile-image",
+  verifyToken,
+  upload.single("image"),
+  updateProfileImage
+);
 
 module.exports = router;

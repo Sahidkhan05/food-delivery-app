@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const {
   getPendingRestaurants,
   approveRestaurant,
@@ -9,23 +10,106 @@ const {
   approveDeliveryBoy,
   rejectDeliveryBoy,
   getApprovedDeliveryBoys,
-  getAllUsers
+  getAllUsers,
+  deleteRestaurant,
+  deleteDeliveryBoy,
+  getAllRestaurants,
+  deleteUser,
+
 } = require("../controllers/adminController");
 
-const requireAuth = require('../middlewares/authMiddleware');
-const requireAdmin = require('../middlewares/adminOnly')
+const requireAuth = require("../middlewares/authMiddleware");
+const requireAdmin = require("../middlewares/adminOnly");
+
+// ================= RESTAURANTS =================
+
+router.get(
+  "/restaurants/pending",
+  requireAuth,
+  requireAdmin,
+  getPendingRestaurants
+);
+
+router.patch(
+  "/restaurants/:id/approve",
+  requireAuth,
+  requireAdmin,
+  approveRestaurant
+);
+
+router.patch(
+  "/restaurants/:id/reject",
+  requireAuth,
+  requireAdmin,
+  rejectRestaurant
+);
+
+router.get(
+  "/restaurants/approved",
+  requireAuth,
+  requireAdmin,
+  getApprovedRestaurants
+);
+
+// ✅ DELETE RESTAURANT
+router.delete(
+  "/restaurants/:id",
+  requireAuth,
+  requireAdmin,
+  deleteRestaurant
+);
+
+// ================= DELIVERY BOYS =================
+
+router.get(
+  "/delivery-boys/pending",
+  requireAuth,
+  requireAdmin,
+  getPendingDeliveryBoys
+);
+
+router.patch(
+  "/delivery-boys/:id/approve",
+  requireAuth,
+  requireAdmin,
+  approveDeliveryBoy
+);
+
+router.patch(
+  "/delivery-boys/:id/reject",
+  requireAuth,
+  requireAdmin,
+  rejectDeliveryBoy
+);
+
+router.get(
+  "/delivery-boys/approved",
+  requireAuth,
+  requireAdmin,
+  getApprovedDeliveryBoys
+);
+
+// ================= USERS =================
+
+router.get(
+  "/users",
+  requireAuth,
+  requireAdmin,
+  getAllUsers
+);
 
 
-router.get("/pending-restaurants", getPendingRestaurants);
-router.put("/approve/:id", requireAuth, requireAdmin, approveRestaurant);
-router.put("/reject/:id", requireAuth, requireAdmin, rejectRestaurant);
-router.get("/approved-restaurants", getApprovedRestaurants);
+router.delete(
+  "/delivery-boys/:id",
+  requireAuth,
+  requireAdmin,
+  deleteDeliveryBoy
+);
 
-router.get('/delivery-boy/requests', getPendingDeliveryBoys);
-router.patch('/delivery-boy/:id/approve',requireAuth, requireAdmin, approveDeliveryBoy);
-router.patch('/delivery-boy/:id/reject', requireAuth, requireAdmin, rejectDeliveryBoy);
-router.get('/delivery-boy/approved', getApprovedDeliveryBoys);
+router.delete("/users/:id", requireAuth,
+  requireAdmin,deleteUser);
 
-router.get('/users', requireAuth, requireAdmin, getAllUsers);
+router.get("/restaurants", requireAuth,
+  requireAdmin, getAllRestaurants);
 
 module.exports = router;

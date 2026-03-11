@@ -15,32 +15,144 @@ import { CartProvider } from "./context/CartContext";
 import OrderConfirmation from "./pages/OrderConfirmation";
 import DeliveryDashboard from "./pages/DeliveryDashboard";
 import RestaurantMenu from "./pages/RestaurantMenu";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import OrderTracking from "./pages/OrderTracking";
+import FeaturedRestaurants from "./components/FeaturedRestaurants";
 
 function App() {
   return (
     <BrowserRouter>
       <CartProvider>
-       
-        <div >
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<HomaPage />} />
-              <Route path="/signup/user" element={<UserSignupPage />} />
-              <Route path="/signup/restaurant" element={<RestaurantSignup />} />
-              <Route path="/signup/delivery" element={<DeliverySignup />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/restaurant-dashboard" element={<RestaurantDashboard />} />
-              <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboard/></AdminRoute>} />
-              <Route path="/user-dashboard" element={<UserDashboard />} />
-              <Route path="/restaurants" element={<Restaurants />} />
-              <Route path="/cart" element={<CartPage />} />
-              <Route path="/order-confirmation" element={<OrderConfirmation />} />
-              <Route path="/delivery-dashboard" element={<DeliveryDashboard />} />
-              <Route path="/restaurant/:restaurantId" element={<RestaurantMenu />} />
-            </Routes>
-          </main>
-        </div>
+        <Routes>
+
+          {/* ===== Public Layout (Navbar visible) ===== */}
+          <Route
+            path="/"
+            element={
+              <>
+                <Navbar />
+                <HomaPage />
+              </>
+            }
+          />
+
+          <Route
+            path="/signup/user"
+            element={
+              <>
+                <Navbar />
+                <UserSignupPage />
+              </>
+            }
+          />
+
+          <Route
+            path="/signup/restaurant"
+            element={
+              <>
+                <Navbar />
+                <RestaurantSignup />
+              </>
+            }
+          />
+
+          <Route
+            path="/signup/delivery"
+            element={
+              <>
+                <Navbar />
+                <DeliverySignup />
+              </>
+            }
+          />
+
+          <Route
+            path="/login"
+            element={
+              <>
+                <Navbar />
+                <LoginPage />
+              </>
+            }
+          />
+
+          <Route
+            path="/restaurants"
+            element={
+              <>
+                <Navbar />
+                <Restaurants />
+              </>
+            }
+          />
+
+          <Route
+            path="/cart"
+            element={
+              <>
+                <Navbar />
+                <CartPage />
+              </>
+            }
+          />
+
+          <Route
+            path="/order-confirmation"
+            element={
+              <>
+                <Navbar />
+                <OrderConfirmation />
+              </>
+            }
+          />
+
+          <Route
+            path="/restaurant/:restaurantId"
+            element={
+              <>
+                <Navbar />
+                <RestaurantMenu />
+              </>
+            }
+          />
+
+          {/* ===== Dashboard Layout (NO Navbar) ===== */}
+          <Route path="/restaurant-dashboard" element={<RestaurantDashboard />} />
+          <Route path="/user-dashboard" element={<UserDashboard />} />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route path="/delivery-dashboard" element={<DeliveryDashboard />} />
+
+          <Route
+  path="/forgot-password"
+  element={
+    <>
+      <Navbar />
+      <ForgotPasswordPage />
+    </>
+  }
+/>
+
+<Route
+  path="/reset-password/:token"
+  element={<ResetPasswordPage />}
+/>
+
+<Route
+  path="/track-orders"
+  element={<OrderTracking />}
+/>
+
+<Route path="/featured-restaurants" element={<FeaturedRestaurants />} />
+
+        </Routes>
       </CartProvider>
     </BrowserRouter>
   );

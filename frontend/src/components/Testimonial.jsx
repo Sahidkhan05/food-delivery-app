@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 const testimonials = [
   {
@@ -8,7 +8,8 @@ const testimonials = [
   },
   {
     name: "Priya Sharma",
-    message: "I love the interface. So smooth and easy to order my favorite meals!",
+    message:
+      "I love the interface. So smooth and easy to order my favorite meals!",
     location: "Delhi",
   },
   {
@@ -20,25 +21,64 @@ const testimonials = [
 
 const Testimonial = () => {
   return (
-    <section className="py-16 bg-white dark:bg-gray-900 transition-colors">
-      <div className="max-w-6xl mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold mb-10 text-black dark:text-white">
-          What Our Customers Say
+    <section className="pt-10 pb-20 bg-[#F9FAFB] dark:bg-gray-950 transition-colors">
+
+      <div className="max-w-7xl mx-auto px-6 text-center">
+
+        <h2 className="text-4xl font-bold mb-14 text-[#111827] dark:text-white">
+          💬 What Our Customers Say
         </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+
           {testimonials.map((item, index) => (
+
             <div
               key={index}
-              className="bg-orange-300 dark:bg-orange-600 p-6 rounded-xl shadow-md hover:shadow-lg transition duration-300"
+              className="relative bg-white dark:bg-gray-900
+              border border-gray-200 dark:border-gray-800
+              p-8 rounded-3xl
+              shadow-md hover:shadow-[0_20px_40px_rgba(99,102,241,0.25)]
+              transition duration-300 hover:-translate-y-2"
             >
-              <p className="text-black dark:text-white italic mb-4">“{item.message}”</p>
-              <h4 className="font-semibold text-gray-900 dark:text-gray-100">{item.name}</h4>
-              <p className="text-sm text-gray-900 dark:text-gray-200">{item.location}</p>
+
+              {/* Quote Symbol */}
+
+              <div
+                className="absolute -top-6 left-6 text-6xl
+                text-[#6366F1] opacity-20"
+              >
+                “
+              </div>
+
+              {/* Message */}
+
+              <p className="text-gray-600 dark:text-gray-300 italic mb-6 relative z-10 leading-relaxed">
+                {item.message}
+              </p>
+
+              {/* User Info */}
+
+              <div className="mt-6">
+
+                <h4 className="font-semibold text-lg text-[#111827] dark:text-white">
+                  {item.name}
+                </h4>
+
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {item.location}
+                </p>
+
+              </div>
+
             </div>
+
           ))}
+
         </div>
+
       </div>
+
     </section>
   );
 };

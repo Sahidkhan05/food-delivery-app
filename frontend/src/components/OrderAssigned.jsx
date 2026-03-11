@@ -2,206 +2,383 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 
 const OrderAssigned = () => {
+
   const [pendingRequests, setPendingRequests] = useState([]);
   const [assignedOrders, setAssignedOrders] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Fetch pending requests & assigned orders
-  const fetchOrders = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) return console.error("No token found. Please login first.");
+  const API = "http://localhost:5000/api/deliveryboy";
 
-      const res = await axios.get(
-        "http://localhost:5000/api/deliveryboy/orders",
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+  /* ================= FETCH ORDERS ================= */
+
+  const fetchOrders = async () => {
+
+    try {
+
+      const token = localStorage.getItem("token");
+
+      const res = await axios.get(`${API}/orders`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       setPendingRequests(res.data.pendingRequests || []);
       setAssignedOrders(res.data.assignedOrders || []);
+
     } catch (err) {
+
       console.error("Error fetching orders:", err);
+
     }
+
   };
 
   useEffect(() => {
+
     fetchOrders();
+
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 5000);
+
+    return () => clearInterval(interval);
+
   }, []);
 
-  // Accept request
+  /* ================= ACCEPT ================= */
+
   const handleAccept = async (id) => {
+
     try {
+
       const token = localStorage.getItem("token");
+
       await axios.post(
-        `http://localhost:5000/api/deliveryboy/request/${id}/accept`,
+        `${API}/request/${id}/accept`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Request Accepted!");
+
+      alert("Order Accepted");
+
       fetchOrders();
+
     } catch (err) {
-      console.error("Error accepting request:", err);
+
+      console.error(err);
+
     }
+
   };
 
-  // Reject request
+  /* ================= REJECT ================= */
+
   const handleReject = async (id) => {
+
     try {
+
       const token = localStorage.getItem("token");
+
       await axios.post(
-        `http://localhost:5000/api/deliveryboy/request/${id}/reject`,
+        `${API}/request/${id}/reject`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("Request Rejected!");
+
+      alert("Order Rejected");
+
       fetchOrders();
+
     } catch (err) {
-      console.error("Error rejecting request:", err);
+
+      console.error(err);
+
     }
+
   };
 
-  // Mark order as delivered
-  const handleDelivered = async (requestId) => {
+  /* ================= DELIVERED ================= */
+
+  const handleDelivered = async (id) => {
+
     try {
+
       const token = localStorage.getItem("token");
+
       await axios.put(
-        `http://localhost:5000/api/deliveryboy/request/${requestId}/deliver`,
+        `${API}/request/${id}/deliver`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert("✅ Order Delivered!");
-      fetchOrders(); // refresh dashboard
+
+      alert("Order Delivered");
+
+      fetchOrders();
+
     } catch (err) {
-      console.error("Error marking delivered:", err);
-      alert("Failed to mark delivered");
+
+      console.error(err);
+
     }
+
   };
 
-  // Update current location
+  /* ================= CANCEL ================= */
+
+  const handleCancel = async (orderId) => {
+
+    try {
+
+      const token = localStorage.getItem("token");
+
+      await axios.put(
+        `http://localhost:5000/api/order/${orderId}/status`,
+        { status: "cancelled" },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      alert("Order Cancelled");
+
+      fetchOrders();
+
+    } catch (err) {
+
+      console.error(err);
+
+    }
+
+  };
+
+  /* ================= UPDATE LOCATION ================= */
+
   const handleUpdateLocation = () => {
+
     if (!navigator.geolocation) {
-      return alert("Geolocation is not supported by your browser");
+
+      alert("Geolocation not supported");
+
+      return;
+
     }
 
     setLoading(true);
 
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const token = localStorage.getItem("token");
+    navigator.geolocation.getCurrentPosition(async (pos) => {
 
-          await axios.put(
-            "http://localhost:5000/api/deliveryboy/location",
-            { latitude, longitude },
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+      try {
 
-          alert("📍 Location updated successfully!");
-        } catch (err) {
-          console.error("Error updating location:", err);
-          alert("Failed to update location");
-        } finally {
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error("Geolocation error:", err);
-        alert("Could not fetch location");
+        const token = localStorage.getItem("token");
+
+        await axios.put(
+          `${API}/location`,
+          {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        alert("Location Updated");
+
+        fetchOrders();
+
+      } catch (err) {
+
+        console.error(err);
+
+      } finally {
+
         setLoading(false);
+
       }
-    );
+
+    });
+
   };
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-bold">📦 Delivery Dashboard</h2>
+
+    <div className="max-w-6xl mx-auto">
+
+      {/* HEADER */}
+
+      <div className="flex justify-between items-center mb-6">
+
+        <h2 className="text-2xl font-bold">
+          Delivery Orders
+        </h2>
+
         <button
           onClick={handleUpdateLocation}
           disabled={loading}
-          className="bg-blue-500 text-white px-4 py-2 rounded shadow"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow"
         >
           {loading ? "Updating..." : "Update Location"}
         </button>
+
       </div>
 
-      {/* Pending Requests */}
-      <h3 className="text-lg font-semibold mb-2">⏳ Pending Requests</h3>
-      {pendingRequests.length === 0 ? (
-        <p>No pending requests</p>
-      ) : (
-        pendingRequests.map((req) => (
-          <div key={req._id} className="border rounded p-4 mb-4 shadow">
-            <p><b>Request ID:</b> {req._id}</p>
-            <p><b>Order ID:</b> {req.order?._id}</p>
-            <p><b>Customer:</b> {req.order?.user?.name || "N/A"}</p>
-            <p><b>Phone:</b> {req.order?.user?.phone || "N/A"}</p>
-            <p><b>Address:</b> {req.order?.shippingAddress || "N/A"}</p>
-            <p><b>Restaurant:</b> {req.order?.restaurant?.name || "N/A"}</p>
+      {/* ================= PENDING ================= */}
 
-            <h4 className="font-semibold mt-2">Items:</h4>
-            <ul className="list-disc ml-6">
-              {req.order?.items?.map((item, i) => (
-                <li key={i}>
-                  {item.food?.name} × {item.quantity} (₹{item.food?.price})
-                </li>
-              ))}
-            </ul>
+      <h3 className="text-xl font-semibold mb-4">
+        Pending Requests
+      </h3>
 
-            <div className="flex gap-2 mt-3">
+      {pendingRequests.length === 0 && (
+        <p className="text-gray-500">No pending requests</p>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-6">
+
+        {pendingRequests.map((req) => (
+
+          <div
+            key={req._id}
+            className="bg-white shadow-md rounded-xl p-5 border"
+          >
+
+            <h4 className="font-bold text-lg text-orange-600 mb-2">
+              {req.order?.restaurant?.restaurantName}
+            </h4>
+
+            <p><b>Customer:</b> {req.order?.user?.name}</p>
+            <p><b>Phone:</b> {req.order?.user?.phone}</p>
+
+            <p>
+              <b>Address:</b>{" "}
+              {req.order?.shippingAddress?.street},{" "}
+              {req.order?.shippingAddress?.city},{" "}
+              {req.order?.shippingAddress?.state} -
+              {req.order?.shippingAddress?.pincode}
+            </p>
+
+            <p><b>Total:</b> ₹{req.order?.totalPrice}</p>
+
+            <div className="mt-3">
+
+              <p className="font-semibold">Items</p>
+
+              <ul className="list-disc ml-5">
+
+                {req.order?.items?.map((item, i) => (
+
+                  <li key={i}>
+                    {item.food?.name} × {item.quantity}
+                  </li>
+
+                ))}
+
+              </ul>
+
+            </div>
+
+            <div className="flex gap-3 mt-4">
+
               <button
                 onClick={() => handleAccept(req._id)}
-                className="bg-green-500 text-white px-3 py-1 rounded"
+                className="bg-green-500 text-white px-4 py-1 rounded"
               >
                 Accept
               </button>
+
               <button
                 onClick={() => handleReject(req._id)}
-                className="bg-red-500 text-white px-3 py-1 rounded"
+                className="bg-red-500 text-white px-4 py-1 rounded"
               >
                 Reject
               </button>
+
             </div>
+
           </div>
-        ))
+
+        ))}
+
+      </div>
+
+      {/* ================= ASSIGNED ================= */}
+
+      <h3 className="text-xl font-semibold mt-10 mb-4">
+        Assigned Orders
+      </h3>
+
+      {assignedOrders.length === 0 && (
+        <p className="text-gray-500">No assigned orders</p>
       )}
 
-      {/* Assigned Orders */}
-      <h3 className="text-lg font-semibold mb-2 mt-6">🚚 Assigned Orders</h3>
-      {assignedOrders.length === 0 ? (
-        <p>No assigned orders</p>
-      ) : (
-        assignedOrders.map((request) => (
-          <div key={request._id} className="border rounded p-4 mb-4 shadow">
-            <p><b>Order ID:</b> {request.order?._id}</p>
-            <p><b>Customer:</b> {request.order?.user?.name || "N/A"}</p>
-            <p><b>Phone:</b> {request.order?.user?.phone || "N/A"}</p>
-            <p><b>Address:</b> {request.order?.shippingAddress || "N/A"}</p>
-            <p><b>Restaurant:</b> {request.order?.restaurant?.name || "N/A"}</p>
+      <div className="grid md:grid-cols-2 gap-6">
 
-            <h4 className="font-semibold mt-2">Items:</h4>
-            <ul className="list-disc ml-6">
-              {request.order?.items?.map((item, i) => (
-                <li key={i}>
-                  {item.food?.name} × {item.quantity} (₹{item.food?.price})
-                </li>
-              ))}
-            </ul>
+        {assignedOrders.map((req) => (
 
-            <div className="flex gap-2 mt-3">
+          <div
+            key={req._id}
+            className="bg-white shadow-md rounded-xl p-5 border"
+          >
+
+            <h4 className="font-bold text-lg text-green-600 mb-2">
+              {req.order?.restaurant?.restaurantName}
+            </h4>
+
+            <p><b>Customer:</b> {req.order?.user?.name}</p>
+            <p><b>Phone:</b> {req.order?.user?.phone}</p>
+
+            <p>
+              <b>Address:</b>{" "}
+              {req.order?.shippingAddress?.street},{" "}
+              {req.order?.shippingAddress?.city},{" "}
+              {req.order?.shippingAddress?.state} -
+              {req.order?.shippingAddress?.pincode}
+            </p>
+
+            <p><b>Total:</b> ₹{req.order?.totalPrice}</p>
+
+            <div className="mt-3">
+
+              <p className="font-semibold">Items</p>
+
+              <ul className="list-disc ml-5">
+
+                {req.order?.items?.map((item, i) => (
+
+                  <li key={i}>
+                    {item.food?.name} × {item.quantity}
+                  </li>
+
+                ))}
+
+              </ul>
+
+            </div>
+
+            <div className="flex gap-3 mt-4">
+
               <button
-                onClick={() => handleDelivered(request._id)}
-                className="bg-purple-500 text-white px-3 py-1 rounded"
+                onClick={() => handleDelivered(req._id)}
+                className="bg-purple-600 text-white px-4 py-2 rounded"
               >
                 Mark as Delivered
               </button>
+
+              <button
+                onClick={() => handleCancel(req.order._id)}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >
+                Cancel
+              </button>
+
             </div>
+
           </div>
-        ))
-      )}
+
+        ))}
+
+      </div>
+
     </div>
+
   );
+
 };
 
 export default OrderAssigned;

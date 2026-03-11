@@ -1,153 +1,230 @@
-const User = require('../models/User');
-const DeliveryBoy = require('../models/DeliveryBoy');
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-require('dotenv').config();
+const User = require("../models/User");
+const DeliveryBoy = require("../models/DeliveryBoy");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const { sendWelcomeEmail, sendEmail } = require("../services/emailService");
+const crypto = require("crypto");
+require("dotenv").config();
 
-// Create JWT Token
+// CREATE JWT TOKEN
 const createToken = (user) => {
   return jwt.sign(
-    { id: user._id, role: user.role }, // ✅ user ID + role
+    { id: user._id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: '3d' }
+    { expiresIn: "3d" }
   );
 };
 
-// USER SIGNUP
+// ================= USER SIGNUP =================
+
 const signupUser = async (req, res) => {
   try {
-    const { name, email, password, phone } = req.body; // ✅ Include phone here
+    const { name, email, password, phone } = req.body;
 
-    const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ error: "Email already in use" });
+    if (!name || !email || !password || !phone) {
+      return res.status(400).json({ error: "All fields required" });
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 6 characters" });
+    }
+
+    const exists = await User.findOne({ email: email.toLowerCase() });
+
+    if (exists) {
+      return res.status(400).json({ error: "Email already in use" });
+    }
 
     const hash = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name,
-      email,
-      password: hash,
-      role: 'user',
-      phone: phone, // ✅ Save phone in DB
-    });
-
-    const token = createToken(user._id);
-    res.status(201).json({ token, user });
-
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-};
-
-
-// DELIVERY BOY SIGNUP
-const signupDelivery = async (req, res) => {
-  try {
-    const { name, email, password, phone, vehicleType } = req.body;
-
-    if (!phone || !vehicleType) {
-      return res.status(400).json({ error: "Phone and Vehicle Type required" });
-    }
-
-    // Check if email already exists in DeliveryBoy collection
-    const exists = await DeliveryBoy.findOne({ email });
-    if (exists) return res.status(400).json({ error: "Email already in use" });
-
-    // Hash password
-    const hash = await bcrypt.hash(password, 10);
-
-    // Create new delivery boy
-    const deliveryBoy = await DeliveryBoy.create({
-      name,
-      email,
+      email: email.toLowerCase(),
       password: hash,
       phone,
-      vehicleType,
-      role: "deliveryBoy", // optional, model me role nahi hai
-      status: "pending",
+      role: "user",
     });
 
-    // Create JWT token
-    const token = createToken(deliveryBoy._id);
+    await sendWelcomeEmail(user.email, user.role);
 
-    res.status(201).json({ token, user: deliveryBoy });
+    const token = createToken(user);
+
+    res.status(201).json({ token, user });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 };
 
-// RESTAURANT SIGNUP (status: pending)
-const signupRestaurant = async (req, res) => {
+// ================= DELIVERY BOY SIGNUP =================
+
+const signupDelivery = async (req, res) => {
   try {
-    const { name, email, password, address, cuisineType } = req.body;
 
-    if (!address || !cuisineType) {
-      return res.status(400).json({ error: "Address and Cuisine Type required" });
+    const { name, email, password, phone, vehicleType, vehicleNumber } = req.body;
+
+    if (!name || !email || !password || !phone || !vehicleType || !vehicleNumber) {
+      return res.status(400).json({ error: "All fields required" });
     }
-
-    // ✅ Check for uploaded image
-    if (!req.file) {
-      return res.status(400).json({ error: "Restaurant image is required" });
-    }
-
-    const image = req.file.filename; // multer stores filename
 
     const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ error: "Email already in use" });
+
+    if (exists) {
+      return res.status(400).json({ error: "Email already in use" });
+    }
 
     const hash = await bcrypt.hash(password, 10);
 
+    const profileImage = req.file ? req.file.filename : "";
+
     const user = await User.create({
       name,
-      email,
+      email: email.toLowerCase(),
       password: hash,
-      address,
-      cuisineType,
-      image,               // ✅ Save image name to DB
-      role: 'restaurant',
-      status: 'pending'
+      phone,
+      profileImage,
+      role: "deliveryBoy",
+      status: "pending",
+
+      // temporarily store vehicle info
+      vehicleType,
+      vehicleNumber
     });
 
-    const token = createToken(user._id);
-    res.status(201).json({ token, user });
+    const token = createToken(user);
+
+    res.status(201).json({
+      token,
+      user
+    });
 
   } catch (err) {
-    res.status(400).json({ error: err.message });
+
+    console.log(err);
+
+    res.status(500).json({ error: err.message });
+
   }
 };
 
+// ================= RESTAURANT SIGNUP =================
 
-// COMMON LOGIN
-const loginUser = async (req, res) => {
-  const { email, password } = req.body;
-
+const signupRestaurant = async (req, res) => {
   try {
-    let user;
 
-    // Check DeliveryBoy collection
-    user = await DeliveryBoy.findOne({ email });
+    console.log("========= RESTAURANT SIGNUP =========");
 
-    // If not found in DeliveryBoy, check User collection
-    if (!user) {
-      user = await User.findOne({ email });
+    // 🔎 check body
+    console.log("REQ BODY:", req.body);
+
+    // 🔎 check uploaded image
+    console.log("REQ FILE:", req.file);
+
+    const { name, email, password, phone, address, cuisineType } = req.body;
+
+    // validation
+    if (!name || !email || !password || !phone || !address || !cuisineType) {
+      return res.status(400).json({ error: "All fields required" });
     }
 
-    // If still not found
-    if (!user) return res.status(400).json({ error: 'Invalid email or password' });
-
-    // Compare password
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ error: 'Invalid email or password' });
-
-    // Approval check for restaurant or deliveryBoy
-    if ((user.role === 'restaurant' || user.role === 'deliveryBoy') && user.status !== 'approved') {
-      return res.status(403).json({ error: `Your account is ${user.status}. Please wait for admin approval.` });
+    if (!req.file) {
+      return res.status(400).json({ error: "Restaurant image required" });
     }
 
-    // Create token
+    // check email exists
+    const exists = await User.findOne({ email });
+
+    if (exists) {
+      return res.status(400).json({ error: "Email already in use" });
+    }
+
+    // hash password
+    const hash = await bcrypt.hash(password, 10);
+
+    // prepare cuisine array
+    const cuisineArray =
+      cuisineType && cuisineType.trim() !== ""
+        ? cuisineType.split(",").map((c) => c.trim())
+        : [];
+
+    console.log("CUISINE ARRAY:", cuisineArray);
+
+    // create user
+    const user = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password: hash,
+      phone,
+
+      cuisineType: cuisineArray,
+
+      addresses: [
+        {
+          type: "Work",
+          street: address,
+        },
+      ],
+
+      role: "restaurant",
+      status: "pending",
+
+      profileImage: req.file.filename,
+    });
+
+    console.log("USER SAVED:", user);
+
+    await sendWelcomeEmail(user.email, user.role);
+
     const token = createToken(user);
 
-    // Send response
+    res.status(201).json({
+      message: "Restaurant signup successful",
+      token,
+      user,
+    });
+
+  } catch (err) {
+
+    console.log("SIGNUP ERROR:", err);
+
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+};
+
+// ================= LOGIN =================
+
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    let user =
+      (await User.findOne({ email })) ||
+      (await DeliveryBoy.findOne({ email }));
+
+    if (!user) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    const match = await bcrypt.compare(password, user.password);
+
+    if (!match) {
+      return res.status(400).json({ error: "Invalid email or password" });
+    }
+
+    if (
+      (user.role === "restaurant" || user.role === "deliveryBoy") &&
+      user.status !== "approved"
+    ) {
+      return res
+        .status(403)
+        .json({ error: `Account is ${user.status}. Wait for admin approval.` });
+    }
+
+    const token = createToken(user);
+
     res.status(200).json({
       token,
       user: {
@@ -157,96 +234,174 @@ const loginUser = async (req, res) => {
         phone: user.phone,
         role: user.role,
         status: user.status,
-        isActive: user.isActive || false, // optional: only for deliveryBoy
-      }
+        profileImage: user.profileImage || "",
+      },
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// ADMIN LOGIN
-const loginAdmin = async (req, res) => {
-  const { email, password } = req.body;
+// ================= GET PROFILE =================
 
+const getUserProfile = async (req, res) => {
   try {
-    const admin = await User.findOne({ email });
+    const user = await User.findById(req.user.id).select("-password");
 
-    if (!admin) return res.status(404).json({ message: "Admin not found" });
-    if (admin.role !== 'admin') return res.status(403).json({ message: "Not authorized as admin" });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
-
-    const token = jwt.sign({ userId: admin._id, role: admin.role }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
-
-    res.status(200).json({ token, admin: { name: admin.name, email: admin.email, role: admin.role } });
-
+    res.json(user);
   } catch (error) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ error: error.message });
   }
 };
 
+// ================= UPDATE PROFILE =================
 
 const userProfileUpdate = async (req, res) => {
   try {
-    const userId = req.user.id; // from verifyToken middleware
-    const { name, phone, password } = req.body; // ❌ email removed
+    const { name, phone } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { name, phone },
+      { new: true }
+    );
 
-    // Update fields
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
-    if (password) user.password = await bcrypt.hash(password, 10);
-
-    await user.save();
-
-    res.status(200).json({ message: "Profile updated successfully", user });
-
+    res.json({ message: "Profile updated", user });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Update Location
+// ================= UPDATE LOCATION =================
+
 const updateLocation = async (req, res) => {
   try {
-    if (!req.user) return res.status(401).json({ message: "Unauthorized" });
-
-    const userId = req.user.id;  // ✅ FIXED
     const { coordinates } = req.body;
 
-    if (!coordinates || coordinates.length !== 2) {
-      return res.status(400).json({ message: "Coordinates array required [longitude, latitude]" });
-    }
-
-    const [longitude, latitude] = coordinates;
-
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
       {
         currentLocation: {
           type: "Point",
-          coordinates: [longitude, latitude],
+          coordinates,
         },
       },
-      { new: true, runValidators: true }
+      { new: true }
     );
 
-    if (!updatedUser) return res.status(404).json({ message: "User not found" });
-
-    res.status(200).json({ message: "Location updated successfully", user: updatedUser });
+    res.json({ message: "Location updated", user });
   } catch (err) {
-    console.error("Location update error:", err);
-    res.status(500).json({ message: "Failed to update location", error: err.message });
+    res.status(500).json({ error: err.message });
   }
 };
 
+// ================= FORGOT PASSWORD =================
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+
+    await user.save();
+
+    const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+
+    await sendEmail(
+      user.email,
+      "Reset Password",
+      `Click here to reset your password: ${resetLink}`
+    );
+
+    res.json({ message: "Password reset link sent to email" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// ================= RESET PASSWORD =================
+
+const resetPassword = async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpire: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Invalid or expired token" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    user.password = hashed;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save();
+
+    res.json({ message: "Password reset successful" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const admin = await User.findOne({ email, role: "admin" });
+
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    const match = await bcrypt.compare(password, admin.password);
+
+    if (!match) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const token = createToken(admin);
+
+    res.json({ token, admin });
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const addAddress = async (req, res) => {
+  try {
+    res.json({ message: "Address added" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+const updateProfileImage = async (req, res) => {
+  try {
+    res.json({ message: "Profile image updated" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 
 
@@ -258,4 +413,10 @@ module.exports = {
   loginAdmin,
   userProfileUpdate,
   updateLocation,
+  forgotPassword,
+  resetPassword,
+  getUserProfile,
+  addAddress,
+  updateProfileImage,
+  
 };

@@ -1,34 +1,105 @@
-import React from 'react'
-import { FaHome, FaClipboardList, FaHistory, FaMoneyBillWave, FaUser, FaSignOutAlt } from 'react-icons/fa';
+import React from "react";
+import {
+  FaClipboardList,
+  FaHistory,
+  FaMoneyBillWave,
+  FaUser,
+  FaSignOutAlt
+} from "react-icons/fa";
+import DarkModeToggle from "./DarkModeToggle";
 
 const menuItems = [
-  { label: 'Profile', icon: <FaUser /> },
-  { label: 'Orders', icon: <FaClipboardList /> },
-  { label: 'Order History', icon: <FaHistory /> },
-  { label: 'Earnings', icon: <FaMoneyBillWave /> },
-
-  { label: 'Logout', icon: <FaSignOutAlt /> },
+  { label: "Profile", icon: <FaUser /> },
+  { label: "Orders", icon: <FaClipboardList /> },
+  { label: "Order History", icon: <FaHistory /> },
+  { label: "Earnings", icon: <FaMoneyBillWave /> },
+  { label: "Logout", icon: <FaSignOutAlt /> },
 ];
 
 const DeliverySidebar = ({ activeTab, onTabClick }) => {
+
   return (
-    <aside className="w-64 bg-orange-500 dark:bg-gray-900 text-white dark:text-gray-100 min-h-screen p-4 shadow-md">
-      <h2 className="text-2xl font-bold mb-6">Delivery Panel</h2>
-      <ul className="space-y-4">
-        {menuItems.map((item) => (
-          <li
-            key={item.label}
-            onClick={() => onTabClick(item.label)}
-            className={`flex items-center gap-3 cursor-pointer px-3 py-2 rounded-md 
-              ${activeTab === item.label ? 'bg-yellow-400 text-black' : 'hover:text-yellow-400'}`}
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-          </li>
-        ))}
-      </ul>
+
+    <aside
+      className="fixed left-0 top-0 h-screen w-64
+      bg-[#1E1B4B] dark:bg-gray-900
+      text-white p-6 shadow-2xl
+      flex flex-col justify-between
+      transition-colors duration-300"
+    >
+
+      {/* Top Section */}
+
+      <div>
+
+        {/* Logo */}
+
+        <h2 className="text-2xl font-bold mb-10 tracking-wide
+        bg-gradient-to-r from-[#6366F1] to-[#8B5CF6]
+        bg-clip-text text-transparent">
+          🚚 Delivery
+        </h2>
+
+        {/* Menu */}
+
+        <ul className="space-y-2">
+
+          {menuItems.map((item) => {
+
+            const isActive = activeTab === item.label;
+
+            return (
+
+              <li
+                key={item.label}
+                onClick={() => onTabClick(item.label)}
+                className={`relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer
+                transition-all duration-300 group
+                ${
+                  isActive
+                    ? "bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] text-white shadow-lg scale-[1.02]"
+                    : "hover:bg-indigo-900 dark:hover:bg-gray-800 text-gray-300"
+                }`}
+              >
+
+                {/* Active indicator */}
+
+                {isActive && (
+                  <span className="absolute left-0 top-0 h-full w-1 bg-white rounded-r-md"></span>
+                )}
+
+                {/* Icon */}
+
+                <span className="text-lg group-hover:scale-110 transition">
+                  {item.icon}
+                </span>
+
+                {/* Label */}
+
+                <span className="text-sm font-medium">
+                  {item.label}
+                </span>
+
+              </li>
+
+            );
+
+          })}
+
+        </ul>
+
+      </div>
+
+      {/* Bottom Section - Dark Mode Toggle */}
+
+      <div className="pt-6 border-t border-indigo-800 dark:border-gray-700 flex justify-center">
+        <DarkModeToggle />
+      </div>
+
     </aside>
+
   );
+
 };
 
 export default DeliverySidebar;

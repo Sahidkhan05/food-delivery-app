@@ -7,7 +7,7 @@ const AdminDashboard = () => {
   return (
     <div>
       <AdminSidebar/>
-      <Footer/>
+    
       
     </div>
   )

@@ -1,68 +1,85 @@
-// src/context/CartContext.jsx
-import React, { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
-const CartContext = createContext();
+export const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
+
+  const [cartItems, setCartItems] = useState(() => {
+    const storedCart = localStorage.getItem("cartItems");
+    return storedCart ? JSON.parse(storedCart) : [];
+  });
+
   const [userAddress, setUserAddress] = useState("");
   const [paymentMode, setPaymentMode] = useState("COD");
 
-  const addToCart = (item) => {
-    const exists = cartItems.find((i) => i._id === item._id);
-    if (exists) {
+  useEffect(() => {
+    localStorage.setItem("cartItems", JSON.stringify(cartItems));
+  }, [cartItems]);
+
+  const addToCart = (food) => {
+
+    const exist = cartItems.find((item) => item._id === food._id);
+
+    if (exist) {
       setCartItems(
-        cartItems.map((i) =>
-          i._id === item._id ? { ...i, quantity: i.quantity + 1 } : i
+        cartItems.map((item) =>
+          item._id === food._id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
         )
       );
     } else {
-      setCartItems([...cartItems, { ...item, quantity: 1 }]);
+      setCartItems([...cartItems, { ...food, quantity: 1 }]);
     }
+
   };
 
-  const removeFromCart = (itemId) => {
-    setCartItems(cartItems.filter((item) => item._id !== itemId));
-  };
-
-  const increaseQuantity = (itemId) => {
+  const increaseQuantity = (id) => {
     setCartItems(
       cartItems.map((item) =>
-        item._id === itemId ? { ...item, quantity: item.quantity + 1 } : item
+        item._id === id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
       )
     );
   };
 
-  const decreaseQuantity = (itemId) => {
+  const decreaseQuantity = (id) => {
     setCartItems(
-      cartItems.map((item) => {
-        if (item._id === itemId && item.quantity > 1) {
-          return { ...item, quantity: item.quantity - 1 };
-        }
-        return item;
-      })
+      cartItems
+        .map((item) =>
+          item._id === id
+            ? { ...item, quantity: item.quantity - 1 }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
     );
+  };
+
+  const removeFromCart = (id) => {
+    setCartItems(cartItems.filter((item) => item._id !== id));
   };
 
   return (
     <CartContext.Provider
-     value={{
-  cartItems,
-  setCartItems, // ← isko yaha add karo
-  addToCart,
-  removeFromCart,
-  increaseQuantity,
-  decreaseQuantity,
-  userAddress,
-  setUserAddress,
-  paymentMode,
-  setPaymentMode,
-}}
+      value={{
+        cartItems,
+        setCartItems,
+        addToCart,
+        increaseQuantity,
+        decreaseQuantity,
+        removeFromCart,
+        userAddress,
+        setUserAddress,
+        paymentMode,
+        setPaymentMode,
+      }}
     >
       {children}
     </CartContext.Provider>
   );
 };
 
-export const useCart = () => useContext(CartContext);
-export { CartContext };
+export const useCart = () => {
+  return useContext(CartContext);
+};

@@ -1,116 +1,212 @@
-const Food = require('../models/Food');
+const Food = require("../models/Food");
 
-// Add Food
+
+// ADD FOOD
 exports.addFood = async (req, res) => {
   try {
-    const { name, price, description } = req.body;
 
-    if (req.user.role !== 'restaurant') {
-      return res.status(403).json({ message: 'Only restaurants can add food' });
+    const { name, halfPrice, fullPrice, description, category, prepTime, isAvailable } = req.body;
+
+    if (!name || !halfPrice || !fullPrice || !category) {
+      return res.status(400).json({
+        message: "Name, price and category required"
+      });
     }
 
-    const image = req.file ? req.file.filename : null;
+    if (!req.user || req.user.role !== "restaurant") {
+      return res.status(403).json({
+        message: "Only restaurants can add food"
+      });
+    }
+
+    const image = req.file ? req.file.filename : "";
 
     const food = await Food.create({
       name,
-      price,
+      halfPrice,
+      fullPrice,
       description,
+      category,
+      prepTime,
+      isAvailable,
       image,
-      restaurant: req.user._id,
+      restaurant: req.user.id
     });
 
-    res.status(201).json({ success: true, food });
+    res.status(201).json({
+      success: true,
+      message: "Food added successfully",
+      food
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    console.error("Add Food Error:", error);
+
+    res.status(500).json({
+      message: "Failed to add food",
+      error: error.message
+    });
+
   }
 };
 
 
-// Get all foods of logged-in restaurant
+
+// GET FOODS OF LOGGED-IN RESTAURANT
 exports.getRestaurantFoods = async (req, res) => {
   try {
-    console.log("Request User Info:", req.user); // debug
-    const foods = await Food.find({ restaurant: req.user.id }); // <-- ✅ FIXED
-    res.json({ success: true, foods });
+
+    const foods = await Food.find({ restaurant: req.user.id });
+
+    res.json({
+      success: true,
+      foods
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };
 
 
-// Get all foods (for user view)
+
+// GET ALL FOODS (FOR USER SIDE)
 exports.getAllFoods = async (req, res) => {
   try {
-    const foods = await Food.find().populate("restaurant", "restaurantName address"); 
-    res.json({ success: true, foods });
+
+    const foods = await Food.find()
+      .populate("restaurant", "name");
+
+    res.json({
+      success: true,
+      foods
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };
 
 
-// DELETE food by ID
 
-// DELETE food by ID with ownership check
+// DELETE FOOD
 exports.deleteFood = async (req, res) => {
   try {
+
     const { id } = req.params;
+
     const food = await Food.findById(id);
 
     if (!food) {
-      return res.status(404).json({ message: "Food not found" });
+      return res.status(404).json({
+        message: "Food not found"
+      });
     }
 
     if (food.restaurant.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to delete this food" });
+      return res.status(403).json({
+        message: "Not authorized to delete this food"
+      });
     }
 
     await Food.findByIdAndDelete(id);
-    res.status(200).json({ message: "Food deleted successfully" });
+
+    res.status(200).json({
+      message: "Food deleted successfully"
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete food", error });
+
+    res.status(500).json({
+      message: "Failed to delete food",
+      error
+    });
+
   }
 };
 
 
 
-// UPDATE food by ID with ownership check
+// UPDATE FOOD
 exports.updateFood = async (req, res) => {
   try {
+
     const { id } = req.params;
-    const { name, price, description } = req.body;
+
+    const { name, halfPrice, fullPrice, description, category, prepTime, isAvailable } = req.body;
 
     const food = await Food.findById(id);
 
     if (!food) {
-      return res.status(404).json({ message: "Food not found" });
+      return res.status(404).json({
+        message: "Food not found"
+      });
     }
 
     if (food.restaurant.toString() !== req.user.id) {
-      return res.status(403).json({ message: "Not authorized to update this food" });
+      return res.status(403).json({
+        message: "Not authorized to update this food"
+      });
     }
 
     const updatedFood = await Food.findByIdAndUpdate(
       id,
-      { name, price, description },
+      {
+        name,
+        halfPrice,
+        fullPrice,
+        description,
+        category,
+        prepTime,
+        isAvailable
+      },
       { new: true }
     );
 
-    res.status(200).json({ message: "Food updated", food: updatedFood });
+    res.status(200).json({
+      message: "Food updated",
+      food: updatedFood
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Update failed", error });
+
+    res.status(500).json({
+      message: "Update failed",
+      error
+    });
+
   }
 };
 
 
+
+// GET FOOD BY RESTAURANT ID (USER SIDE)
 exports.getFoodByRestaurant = async (req, res) => {
   try {
+
     const restaurantId = req.params.id;
 
     const foods = await Food.find({ restaurant: restaurantId });
 
-    res.status(200).json({ success: true, foods });
+    res.status(200).json({
+      success: true,
+      foods
+    });
+
   } catch (error) {
-    res.status(500).json({ message: error.message });
+
+    res.status(500).json({
+      message: error.message
+    });
+
   }
 };

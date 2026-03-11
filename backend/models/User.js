@@ -1,75 +1,95 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
-  name: {
+const addressSchema = new mongoose.Schema({
+  type: {
     type: String,
-    required: true,
+    enum: ["Home", "Work", "Other"],
+    default: "Home",
   },
+  street: String,
+  city: String,
+  state: String,
+  pincode: String,
+});
 
-  email: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-
-  password: {
-    type: String,
-    required: true,
-  },
-
-  role: {
-    type: String,
-    enum: ["user", "restaurant"], // deliveryBoy hata diya
-    default: "user",
-  },
-
-  // Restaurant-specific fields
-  restaurantName: {
-    type: String,
-  },
-
-  address: {
-    type: String,
-  },
-
-  cuisineType: {
-    type: String,
-  },
-
-  image: {
-    type: String,
-    default: "",
-  },
-
-  phone: {                        
-    type: String,
-    required: true,
-  },
-
-  currentLocation: {
-    type: {
+const userSchema = new mongoose.Schema(
+  {
+    name: {
       type: String,
-      enum: ["Point"],
-      default: "Point",
+      required: true,
     },
-    coordinates: {
-      type: [Number],
-      default: [0, 0],
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
     },
-  },
 
-  status: {
-    type: String,
-    enum: ["pending", "approved", "rejected"],
-    default: "pending",
-  },
-  
+    password: {
+      type: String,
+      required: true,
+    },
 
-  joiningDate: {
-    type: Date,
-    default: Date.now,
+    phone: {
+      type: String,
+      required: true,
+      match: /^[0-9]{10}$/,
+    },
+
+    role: {
+      type: String,
+      enum: ["user", "restaurant", "deliveryBoy", "admin"],
+      default: "user",
+    },
+
+    status: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
+    profileImage: {
+      type: String,
+      default: "",
+    },
+
+    // 🔹 restaurant only
+    cuisineType: {
+      type: [String],
+    },
+
+    // 🔹 delivery boy only
+    vehicleType: {
+      type: String,
+    },
+
+    vehicleNumber: {
+      type: String,
+    },
+
+    addresses: {
+      type: [addressSchema],
+      default: [],
+    },
+
+    currentLocation: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number],
+        default: [0, 0],
+      },
+    },
+
+    resetPasswordToken: String,
+    resetPasswordExpire: Date,
   },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 userSchema.index({ currentLocation: "2dsphere" });
 
